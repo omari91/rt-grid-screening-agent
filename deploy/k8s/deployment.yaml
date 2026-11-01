@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rt-grid-screening-agent
+  namespace: tso-production
+  labels:
+    app.kubernetes.io/name: rt-grid-screening-agent
+    app.kubernetes.io/part-of: tso-audit-lakehouse
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rt-grid-screening-agent
+  template:
+    metadata:
+      labels:
+        app: rt-grid-screening-agent
+    spec:
+      # Enforce pod-level security defaults matching unprivileged gridagent (UID 10001)
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: grid-agent
+          image: ghcr.io/omari91/rt-grid-screening-agent:v0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+
+          # Strict resource bounds to prevent node starvation during concurrent power flow
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+
+          # Container runtime security hardening
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # Ephemeral storage mount for local process temp files
+          volumeMounts:
+            - name: tmp-dir
+              mountPath: /tmp
+
+          env:
+            - name: GRID_AGENT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: grid-agent-secrets
+                  key: api-token
+                  optional: true
+            - name: GRID_AGENT_AIRGAPPED
+              value: "1"
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      volumes:
+        - name: tmp-dir
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rt-grid-screening-agent-svc
+  namespace: tso-production
+  labels:
+    app: rt-grid-screening-agent
+spec:
+  type: ClusterIP
+  selector:
+    app: rt-grid-screening-agent
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
+

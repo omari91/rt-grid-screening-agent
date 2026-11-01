@@ -36,6 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Structured screening (`POST /v1/screen`) and resilient natural-language intake (`POST /v1/screen/intake`).
   - Zero-dependency vector SVG plotting (`POST /v1/screen/plot`, `POST /v1/screen/intake/plot`) rendering voltage trajectories against AS/NZS statutory envelopes.
   - Air-gapped privacy enforcement (`GRID_AGENT_AIRGAPPED=1`) blocking outbound cloud LLM calls on confidential connection studies.
+  - Request-scoped asynchronous correlation ID tracking (`logging_config.py`) via `contextvars.ContextVar` and structured JSON logs.
+  - Global exception handlers (`exceptions.py`) enforcing uniform JSON error contracts with `X-Correlation-ID` header and body propagation.
+  - Prometheus metrics instrumentation (`metrics.py`) exposing `/metrics` with latency histograms, solver failure counters, and queue backlog gauges.
+  - Hardened Kubernetes manifests (`deploy/k8s/`) including unprivileged deployment (`UID 10001`, read-only root FS, dropped capabilities), Prometheus `ServiceMonitor`, and alerting `PrometheusRule`.
 
 - **Packaging & Registry Integration**:
   - Hatchling distribution build in `pyproject.toml` publishing package `grid-screen-mcp` with bundled CSIRO networks R & H `.dss` and JSON fixtures.

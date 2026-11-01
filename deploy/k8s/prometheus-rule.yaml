@@ -1,0 +1,38 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rt-grid-screening-agent-alerts
+  namespace: tso-production
+  labels:
+    release: prometheus-stack
+spec:
+  groups:
+    - name: GridScreeningAlerts
+      rules:
+        - alert: GridScreeningSolverFailuresHigh
+          expr: rate(grid_opendss_solver_failures_total[5m]) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High rate of OpenDSS solver failures detected"
+            description: "The Tier-2 OpenDSS physics solver is experiencing convergence errors or non-linear divergence on > 5% of requests over the last 5 minutes."
+
+        - alert: GridScreeningAPIHighLatency
+          expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "API P99 latency exceeds 500ms threshold"
+            description: "Screening endpoint response times are degraded, potentially indicating heavy load or slow child process execution."
+
+        - alert: GridQueueBacklogStalled
+          expr: grid_queue_backlog_pending_total > 100
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Interconnection screening queue backlog growing"
+            description: "The processing queue has more than 100 pending applications waiting for validation."
+

@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rt-grid-screening-agent-monitor
+  namespace: tso-production
+  labels:
+    release: prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: rt-grid-screening-agent
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+

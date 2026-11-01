@@ -25,6 +25,9 @@ from pydantic import BaseModel, Field, ValidationError
 from grid_screening_agent import __version__
 from grid_screening_agent.agent import GridScreeningAgent
 from grid_screening_agent.dashboard import render_compliance_dashboard_html
+from grid_screening_agent.exceptions import register_exception_handlers
+from grid_screening_agent.logging_config import correlation_id_middleware, logger
+from grid_screening_agent.metrics import setup_metrics_endpoints
 from grid_screening_agent.models import (
     AssetType,
     ConnectionApplication,
@@ -35,8 +38,6 @@ from grid_screening_agent.models import (
 from grid_screening_agent.physics.topology import list_supported_networks
 from grid_screening_agent.plotting import render_verdict_svg
 from grid_screening_agent.queue_cache import INTERCONNECTION_QUEUE
-
-logger = logging.getLogger(__name__)
 
 ProviderChoice = Literal["auto", "deterministic", "gemini", "anthropic", "openai"]
 
@@ -60,8 +61,12 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "Authorization", "X-Correlation-ID"],
+    expose_headers=["X-Correlation-ID"],
 )
+app.middleware("http")(correlation_id_middleware)
+setup_metrics_endpoints(app)
+register_exception_handlers(app)
 
 
 @app.middleware("http")
