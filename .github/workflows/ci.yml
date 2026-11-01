@@ -1,0 +1,84 @@
+name: Python CI & Schema Guards
+
+on:
+  pull_request:
+    branches: [ "main", "master" ]
+  push:
+    branches: [ "**" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Pytest & Glue Schema Guards (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.11", "3.13" ]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install Core and Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Run Core Physics, Intake, Guardrails & MCP Unit Tests
+        run: |
+          pytest tests/ --ignore=tests/infrastructure -v --cov=grid_screening_agent
+
+      - name: Run Infrastructure & Glue Schema Guards
+        run: |
+          pytest tests/infrastructure/ tests/test_schema_evolution.py -v
+
+  package:
+    name: Build, Inspect & Smoke-Test Installed Wheel
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build wheel and sdist
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Validate distribution metadata & bundled fixtures
+        run: |
+          twine check --strict dist/*
+          python scripts/check_release.py dist/
+
+      - name: Install wheel into a clean venv (no source tree on path)
+        run: |
+          python -m venv /tmp/wheelenv
+          /tmp/wheelenv/bin/pip install dist/*.whl
+          /tmp/wheelenv/bin/grid-screen triage --network R --kw 3.0 --scale 3.0 --provider deterministic --json > /tmp/triage.json
+          /tmp/wheelenv/bin/python -c "import json; d=json.load(open('/tmp/triage.json')); assert d['decision']=='FAST_TRACK_APPROVED', d['decision']; print('CLI OK')"
+
+      - name: Live MCP stdio handshake against installed console script
+        working-directory: /tmp
+        run: |
+          PATH="/tmp/wheelenv/bin:$PATH" /tmp/wheelenv/bin/python "$GITHUB_WORKSPACE/scripts/smoke_mcp_stdio.py"
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

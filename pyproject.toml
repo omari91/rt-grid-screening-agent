@@ -1,0 +1,118 @@
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[project]
+# Distribution name chosen so `uvx grid-screen-mcp` resolves directly to the MCP entrypoint.
+# The importable package remains `grid_screening_agent` so no source imports change.
+name = "grid-screen-mcp"
+dynamic = ["version"]
+description = "Physics-grounded LV/MV/HV grid connection screening MCP server (OpenDSS + N-1 SCR + audit receipts)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Clifford Ondieki" }
+]
+keywords = [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "power-systems",
+    "grid-connection",
+    "hosting-capacity",
+    "opendss",
+    "interconnection-queue",
+    "agentic-ai",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Framework :: FastAPI",
+    "Typing :: Typed",
+]
+# Runtime floors match the API surface actually exercised by the test suite:
+#   - `mcp>=2.0` is required for `mcp.server.mcpserver.MCPServer`, typed `outputSchema`,
+#     and resource templates used by `grid://verdicts/{fingerprint}/...`.
+dependencies = [
+    "pydantic>=2.5.0",
+    "fastapi>=0.110.0",
+    "starlette>=0.37.0",
+    "uvicorn>=0.29.0",
+    "httpx>=0.27.0",
+    "networkx>=3.0",
+    "numpy>=1.26.0",
+    "opendssdirect.py>=0.8.0",
+    "mcp>=2.0.0,<3",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pandas>=2.0.0",
+    "instructor>=1.0.0",
+    "openai>=1.0.0",
+]
+llm = [
+    "instructor>=1.0.0",
+    "openai>=1.0.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "build>=1.2.0",
+    "twine>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://www.cliffordomari.com"
+Repository = "https://github.com/omari91/rt-grid-screening-agent"
+Issues = "https://github.com/omari91/rt-grid-screening-agent/issues"
+Documentation = "https://github.com/omari91/rt-grid-screening-agent#readme"
+
+[project.scripts]
+grid-screen = "grid_screening_agent.cli:main"
+grid-screen-mcp = "grid_screening_agent.mcp_server:main"
+grid-screen-api = "grid_screening_agent.api:main"
+
+[tool.hatch.version]
+# Single source of truth: `grid_screening_agent.__version__` (also echoed by /health and AuditReceipt.runtime_versions).
+path = "src/grid_screening_agent/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/grid_screening_agent"]
+# Why explicit artifacts: CSIRO `.dss` feeders and `reference_profiles.json` are runtime data, not code.
+# Missing them would make every Tier-2 study abstain, so the wheel check in CI asserts their presence.
+artifacts = [
+    "src/grid_screening_agent/fixtures/**/*.dss",
+    "src/grid_screening_agent/fixtures/**/*.json",
+]
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/grid_screening_agent",
+    "tests",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "server.json",
+    "pyproject.toml",
+]
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

@@ -1,0 +1,20 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Environments & packaging
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Secrets & local overrides
+.env
+.DS_Store
+
+# Optional local link to full Ausgrid CSVs
+data/

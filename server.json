@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.omari91/rt-grid-screening-agent",
+  "title": "Grid Connection Screening Agent",
+  "description": "Physics-grounded LV/MV/HV grid connection screening: OpenDSS AC, N-1 SCR, SHA-256 audit receipts.",
+  "version": "0.1.0",
+  "websiteUrl": "https://www.cliffordomari.com",
+  "repository": {
+    "url": "https://github.com/omari91/rt-grid-screening-agent",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "grid-screen-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "GRID_AGENT_MCP_SCOPE",
+          "description": "Tool scope: 'full' (default), 'tier1_only' (no OpenDSS child processes), or 'readonly'.",
+          "isRequired": false,
+          "default": "full"
+        },
+        {
+          "name": "GRID_AGENT_AIRGAPPED",
+          "description": "Set to 'true' to block all outbound LLM calls (deterministic-only mode).",
+          "isRequired": false,
+          "default": "false"
+        },
+        {
+          "name": "GRID_AGENT_MAX_DSS_WORKERS",
+          "description": "Maximum concurrent isolated OpenDSS worker processes.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
+

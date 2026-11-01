@@ -1,0 +1,29 @@
+services:
+  rt-grid-screening-agent:
+    build: .
+    image: omari91/rt-grid-screening-agent:latest
+    ports:
+      - "8000:8000"
+    user: "10001:10001"
+
+    # Zero-Trust OS & Kernel Hardening
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    volumes:
+      # Mount bundled OpenDSS feeder models explicitly as read-only
+      - ./src/grid_screening_agent/fixtures/networks:/models:ro
+      # Ephemeral memory-backed scratch directory for transient pipes/caches
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 64M
+
+    environment:
+      - GRID_AGENT_API_TOKEN=${GRID_AGENT_API_TOKEN:-}
+      - GRID_AGENT_MCP_SCOPE=${GRID_AGENT_MCP_SCOPE:-full}
+      - GRID_AGENT_AIRGAPPED=${GRID_AGENT_AIRGAPPED:-false}
+

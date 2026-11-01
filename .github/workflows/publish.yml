@@ -1,0 +1,105 @@
+name: Publish to PyPI & MCP Registry
+
+# Triggered only by pushing a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+# Why tags only: PyPI versions are immutable forever; publishing must be a deliberate human act.
+on:
+  push:
+    tags: [ "v*" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Test, Build & Verify Release Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Run full test suite
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+          pytest -q
+
+      - name: Build wheel and sdist
+        run: |
+          pip install build twine
+          python -m build
+
+      - name: Verify tag == __version__ == server.json, fixtures bundled, mcp-name present
+        run: |
+          twine check --strict dist/*
+          python scripts/check_release.py dist/ --tag "${GITHUB_REF_NAME}"
+
+      - name: Smoke-test installed wheel over MCP stdio
+        working-directory: /tmp
+        run: |
+          python -m venv /tmp/wheelenv
+          /tmp/wheelenv/bin/pip install "$GITHUB_WORKSPACE"/dist/*.whl
+          PATH="/tmp/wheelenv/bin:$PATH" /tmp/wheelenv/bin/python "$GITHUB_WORKSPACE/scripts/smoke_mcp_stdio.py"
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI (Trusted Publishing / OIDC)
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/grid-screen-mcp/
+    permissions:
+      id-token: write   # OIDC token for PyPI Trusted Publishing — no long-lived API token stored in GitHub
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-mcp-registry:
+    name: Publish server.json to the Official MCP Registry
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # GitHub OIDC proves ownership of the io.github.omari91/* namespace
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Wait for PyPI to serve the new version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          for i in $(seq 1 30); do
+            if curl -fsS "https://pypi.org/pypi/grid-screen-mcp/${VERSION}/json" > /dev/null; then
+              echo "PyPI is serving grid-screen-mcp ${VERSION}"; exit 0
+            fi
+            echo "Waiting for PyPI propagation (${i}/30)..."; sleep 10
+          done
+          echo "PyPI did not serve ${VERSION} in time"; exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --help > /dev/null
+
+      - name: Authenticate with GitHub OIDC & publish
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
