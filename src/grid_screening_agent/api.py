@@ -24,6 +24,10 @@ from pydantic import BaseModel, Field, ValidationError
 
 from grid_screening_agent import __version__
 from grid_screening_agent.agent import GridScreeningAgent
+from grid_screening_agent.compat_simulate import (
+    OmariwebSimulationRequest,
+    solve_omariweb_simulation,
+)
 from grid_screening_agent.dashboard import render_compliance_dashboard_html
 from grid_screening_agent.exceptions import register_exception_handlers
 from grid_screening_agent.logging_config import correlation_id_middleware, logger
@@ -270,6 +274,12 @@ def screen_intake_plot(req: NaturalLanguageScreeningRequest) -> Response:
             "X-Reproducibility-SHA256": verdict.audit_receipt.reproducibility_sha256,
         },
     )
+
+
+@app.post("/v1/compat/omariweb-simulate")
+def compat_omariweb_simulate(req: OmariwebSimulationRequest) -> dict[str, Any]:
+    """Execute high-fidelity simulation formatted specifically for the www.cliffordomari.com frontend."""
+    return solve_omariweb_simulation(req)
 
 
 def main() -> None:

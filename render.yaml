@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: grid-screen-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: grid-screen-api --host 0.0.0.0 --port 8000
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: GRID_AGENT_AIRGAPPED
+        value: "1"
+      - key: GRID_AGENT_CORS_ORIGINS
+        value: "https://www.cliffordomari.com,https://cliffordomari.com,https://omari91-web.vercel.app,http://localhost:3000"
+      - key: GRID_AGENT_MAX_DSS_WORKERS
+        value: "4"
