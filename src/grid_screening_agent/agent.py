@@ -320,6 +320,88 @@ def _detect_provider(preferred: str = "auto") -> str:
     return "deterministic"
 
 
+def _call_gemini_endpoint(
+    client: httpx.Client,
+    prompt_body: str,
+    model_override: Optional[str] = None,
+) -> str:
+    """Send prompt strictly to Google's Generative Language API using GEMINI_API_KEY."""
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    model = model_override or "gemini-2.5-flash"
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    resp = client.post(
+        endpoint,
+        headers={
+            "x-goog-api-key": gemini_key,
+            "content-type": "application/json",
+        },
+        json={
+            "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+            "contents": [{"role": "user", "parts": [{"text": prompt_body}]}],
+        },
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return str(data["candidates"][0]["content"]["parts"][0]["text"]).strip()
+
+
+def _call_anthropic_endpoint(
+    client: httpx.Client,
+    prompt_body: str,
+    model_override: Optional[str] = None,
+) -> str:
+    """Send prompt strictly to Anthropic Messages API using ANTHROPIC_API_KEY."""
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    model = model_override or "claude-sonnet-4-20250514"
+    resp = client.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": anthropic_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json={
+            "model": model,
+            "max_tokens": 700,
+            "system": SYSTEM_PROMPT,
+            "messages": [{"role": "user", "content": prompt_body}],
+        },
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return str(data["content"][0]["text"]).strip()
+
+
+def _call_openai_endpoint(
+    client: httpx.Client,
+    prompt_body: str,
+    model_override: Optional[str] = None,
+) -> str:
+    """Send prompt to OpenAI Chat Completions API using OPENAI_API_KEY."""
+    openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    model = model_override or "gpt-4o-mini"
+    openai_url = (
+        f"{os.environ['OPENAI_BASE_URL'].rstrip('/')}/chat/completions"
+        if "OPENAI_BASE_URL" in os.environ
+        else "https://api.openai.com/v1/chat/completions"
+    )
+    resp = client.post(
+        openai_url,
+        headers={"Authorization": f"Bearer {openai_key}"},
+        json={
+            "model": model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt_body},
+            ],
+            "temperature": 0.1,
+        },
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return str(data["choices"][0]["message"]["content"]).strip()
+
+
 def _run_llm_memo_synthesis(
     provider: str,
     user_context: str,
@@ -346,7 +428,7 @@ def _run_llm_memo_synthesis(
             )
             return None
 
-    model_override = os.environ.get("GRID_AGENT_MODEL", "").strip()
+    model_override = os.environ.get("GRID_AGENT_MODEL", "").strip() or None
     nonce = os.urandom(16).hex()
     start_delim = f"START_UNTRUSTED_PAYLOAD_{nonce}"
     end_delim = f"END_UNTRUSTED_PAYLOAD_{nonce}"
@@ -369,63 +451,11 @@ def _run_llm_memo_synthesis(
     try:
         with httpx.Client(timeout=20.0) as client:
             if provider == "gemini":
-                api_key = os.environ["GEMINI_API_KEY"]
-                model = model_override or "gemini-2.5-flash"
-                resp = client.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                    headers={
-                        "x-goog-api-key": api_key,
-                        "content-type": "application/json",
-                    },
-                    json={
-                        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-                        "contents": [{"role": "user", "parts": [{"text": prompt_body}]}],
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                synthesized = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-
+                synthesized = _call_gemini_endpoint(client, prompt_body, model_override)
             elif provider == "anthropic":
-                api_key = os.environ["ANTHROPIC_API_KEY"]
-                model = model_override or "claude-sonnet-4-20250514"
-                resp = client.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers={
-                        "x-api-key": api_key,
-                        "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
-                    },
-                    json={
-                        "model": model,
-                        "max_tokens": 700,
-                        "system": SYSTEM_PROMPT,
-                        "messages": [{"role": "user", "content": prompt_body}],
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                synthesized = data["content"][0]["text"].strip()
-
+                synthesized = _call_anthropic_endpoint(client, prompt_body, model_override)
             elif provider == "openai":
-                api_key = os.environ["OPENAI_API_KEY"]
-                base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-                model = model_override or "gpt-4o-mini"
-                resp = client.post(
-                    f"{base_url}/chat/completions",
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    json={
-                        "model": model,
-                        "messages": [
-                            {"role": "system", "content": SYSTEM_PROMPT},
-                            {"role": "user", "content": prompt_body},
-                        ],
-                        "temperature": 0.1,
-                    },
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                synthesized = data["choices"][0]["message"]["content"].strip()
+                synthesized = _call_openai_endpoint(client, prompt_body, model_override)
     except Exception as exc:
         logger.warning("LLM memo synthesis failed for provider '%s'; falling back to deterministic memo: %s", provider, exc)
         return None

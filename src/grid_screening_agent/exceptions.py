@@ -58,13 +58,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
+                "detail": exc.errors(),
                 "error": {
                     "code": "REQUEST_VALIDATION_ERROR",
                     "message": "The provided connection application payload failed schema validation.",
                     "details": exc.errors(),
                     "correlation_id": corr_id,
                     "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                }
+                },
             },
             headers={"X-Correlation-ID": corr_id},
         )
@@ -76,12 +77,13 @@ def register_exception_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={
+                "detail": exc.detail,
                 "error": {
                     "code": f"HTTP_{exc.status_code}",
                     "message": exc.detail,
                     "correlation_id": corr_id,
                     "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                }
+                },
             },
             headers={"X-Correlation-ID": corr_id},
         )
