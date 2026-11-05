@@ -340,15 +340,19 @@ def extract_grid_intent(
                 ).choices[0].message.content,
             )
 
-        api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-        if api_key:
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+        openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
+        if openai_key:
+            openai_url = (
+                f"{os.environ['OPENAI_BASE_URL'].rstrip('/')}/chat/completions"
+                if "OPENAI_BASE_URL" in os.environ
+                else "https://api.openai.com/v1/chat/completions"
+            )
             with httpx.Client(timeout=15.0) as http_client:
 
                 def _call_openai_http(msgs: list[dict[str, str]]) -> str:
                     resp = http_client.post(
-                        f"{base_url}/chat/completions",
-                        headers={"Authorization": f"Bearer {api_key}"},
+                        openai_url,
+                        headers={"Authorization": f"Bearer {openai_key}"},
                         json={
                             "model": model_name,
                             "messages": msgs,

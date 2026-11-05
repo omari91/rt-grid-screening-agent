@@ -229,6 +229,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "name": "list_networks",
         "description": "List all available LV feeders (CSIRO R, H), MV benchmarks, and NEM 132-500 kV substations. Catalog lookup only; does NOT run power flow.",
         "parameters": {"type": "object", "properties": {}, "required": []},
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
     },
     {
         "name": "inspect_connection_point",
@@ -240,6 +246,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
                 "connection_node": _COMMON_APP_PROPERTIES["connection_node"],
             },
             "required": ["network_id"],
+        },
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
         },
     },
     {
@@ -255,6 +267,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
             },
             "required": ["network_id", "proposed_capacity_kw"],
         },
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
     },
     {
         "name": "run_tier1_screen",
@@ -263,6 +281,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "type": "object",
             "properties": _COMMON_APP_PROPERTIES,
             "required": ["network_id", "proposed_capacity_kw"],
+        },
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
         },
     },
     {
@@ -279,6 +303,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
             },
             "required": ["network_id", "proposed_capacity_kw"],
         },
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
     },
     {
         "name": "propose_mitigations",
@@ -287,6 +317,12 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "type": "object",
             "properties": _COMMON_APP_PROPERTIES,
             "required": ["network_id", "proposed_capacity_kw"],
+        },
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
         },
     },
 ]

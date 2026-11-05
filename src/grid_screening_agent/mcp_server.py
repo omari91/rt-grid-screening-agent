@@ -611,29 +611,94 @@ def build_mcp_server(scope: Optional[str] = None) -> _MCPServer:
         )
 
     # Always-available catalog & topology discovery tools
-    server.tool(annotations=_PURE_PHYSICS_ANNOTATIONS, structured_output=True)(list_networks)
-    server.tool(annotations=_PURE_PHYSICS_ANNOTATIONS, structured_output=True)(inspect_connection_point)
-    server.tool(annotations=_PURE_PHYSICS_ANNOTATIONS, structured_output=True)(classify_screening_regime)
+    server.tool(
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+        structured_output=True,
+    )(list_networks)
+    server.tool(
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+        structured_output=True,
+    )(inspect_connection_point)
+    server.tool(
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+        structured_output=True,
+    )(classify_screening_regime)
     server.tool(
         name="search_tools",
-        annotations=_PURE_PHYSICS_ANNOTATIONS,
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
         structured_output=True,
     )(_scoped_search_tools)
 
     # Tier-1 sub-10ms analytical heuristic screen (enabled in `tier1_only` and `full`)
     if active_scope in ("tier1_only", "full"):
-        server.tool(annotations=_PURE_PHYSICS_ANNOTATIONS, structured_output=True)(run_tier1_screen)
+        server.tool(
+            annotations={
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            structured_output=True,
+        )(run_tier1_screen)
 
     # Tier-2 isolated OpenDSS child-process & batch sweep tools (restricted strictly to `full` scope)
     if active_scope == "full":
-        server.tool(annotations=_PURE_PHYSICS_ANNOTATIONS, structured_output=True)(run_tier2_ac_study)
-        server.tool(annotations=_PURE_PHYSICS_ANNOTATIONS, structured_output=True)(propose_mitigations)
-        server.tool(annotations=_STATEFUL_TRIAGE_ANNOTATIONS, structured_output=True)(
-            screen_connection_application
-        )
-        server.tool(annotations=_STATEFUL_TRIAGE_ANNOTATIONS, structured_output=True)(
-            sweep_connection_capacities
-        )
+        server.tool(
+            annotations={
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            structured_output=True,
+        )(run_tier2_ac_study)
+        server.tool(
+            annotations={
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            structured_output=True,
+        )(propose_mitigations)
+        server.tool(
+            annotations={
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            structured_output=True,
+        )(screen_connection_application)
+        server.tool(
+            annotations={
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            structured_output=True,
+        )(sweep_connection_capacities)
 
     # Off-context MCP Resources (Domain 2 Token Efficiency)
     server.resource(
