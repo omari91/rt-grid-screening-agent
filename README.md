@@ -4,6 +4,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/grid-screen-mcp.svg)](https://pypi.org/project/grid-screen-mcp/)
 [![CI](https://github.com/omari91/rt-grid-screening-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/omari91/rt-grid-screening-agent/actions/workflows/ci.yml)
+[![M8ven Verified](https://m8ven.ai/badge/mcp/omari91-rt-grid-screening-agent-11ggb0?variant=verified)](https://m8ven.ai/mcp/omari91-rt-grid-screening-agent-11ggb0?s=readme)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A deployable, physics-grounded **Agentic Grid Connection Screening Tool** spanning the full Australian vertical voltage continuum (**415 V LV → 11–20 kV MV → 132–500 kV NEM Transmission**).
