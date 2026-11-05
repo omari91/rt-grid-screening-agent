@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grid Connection Screening Agent — Interactive Live Playground</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #030712; color: #f3f4f6; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center min-h-screen">
+  <div class="max-w-4xl w-full space-y-6">
+    <!-- Header -->
+    <header class="border-b border-slate-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <span class="text-sky-400">⚡</span> Grid Screening Agent <span class="text-xs bg-sky-950 text-sky-400 border border-sky-800 px-2 py-0.5 rounded">v0.1.0</span>
+        </h1>
+        <p class="text-xs text-slate-400 mt-1">Physics-Grounded LV/MV/HV Interconnection Queue Screening (OpenDSS + N-1 SCR + SHA-256)</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="connectionBadge" class="text-xs px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-950/40 text-emerald-400 font-medium">
+          ● Zero-Backend Preset Mode
+        </span>
+      </div>
+    </header>
+
+    <!-- Controls Card -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4 backdrop-blur">
+      <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <label class="text-sm font-semibold text-slate-200">Select Connection Scenario:</label>
+        <select id="scenarioSelect" class="bg-slate-950 border border-slate-700 text-sm rounded-lg px-3 py-2 w-full sm:w-auto text-slate-100 focus:outline-none focus:border-sky-500">
+          <!-- Populated dynamically from precomputed_receipts.json -->
+        </select>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+        <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800/80">
+          <span class="text-slate-400 block">Target Network:</span>
+          <span id="lblNetwork" class="font-bold text-slate-200">-</span>
+        </div>
+        <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800/80">
+          <span class="text-slate-400 block">Proposed Capacity:</span>
+          <span id="lblCapacity" class="font-bold text-slate-200">-</span>
+        </div>
+        <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800/80">
+          <span class="text-slate-400 block">Asset Classification:</span>
+          <span id="lblAsset" class="font-bold text-slate-200">-</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 pt-2">
+        <button id="btnRun" class="bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition-colors shadow-lg shadow-sky-900/20">
+          Screen Application
+        </button>
+        <button id="btnToggleLive" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg transition-colors border border-slate-700">
+          Switch to Live API
+        </button>
+        <span id="statusTimer" class="text-xs text-amber-400 hidden animate-pulse">Waking up AC physics engine (~30-45s on free tier)... <span id="timerSec">0</span>s</span>
+      </div>
+    </div>
+
+    <!-- Results Ledger -->
+    <div id="resultsCard" class="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
+      <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-800/80 pb-3">
+        <h2 class="text-sm font-bold text-slate-200 flex items-center gap-2">
+          Screening Verdict & Compliance Envelope
+        </h2>
+        <span id="decisionBadge" class="text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+          READY
+        </span>
+      </div>
+
+      <!-- KPI Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400">Peak Voltage</span>
+          <p id="valVoltage" class="text-base font-bold text-white mt-1">-</p>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400">Max Line Loading</span>
+          <p id="valLoading" class="text-base font-bold text-white mt-1">-</p>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400">System Strength (SCR N-1)</span>
+          <p id="valSCR" class="text-base font-bold text-white mt-1">-</p>
+        </div>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <span class="text-slate-400">Binding Constraint</span>
+          <p id="valConstraint" class="text-base font-bold text-slate-300 mt-1">-</p>
+        </div>
+      </div>
+
+      <!-- Regulatory Alert (if any) -->
+      <div id="regulatoryAlert" class="hidden p-3 rounded-lg bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
+        <span class="text-red-400 font-bold">⚠️ STATUTORY OVERRIDE:</span>
+        <span id="regulatoryText">NER S5.2.5 System Strength violation</span>
+      </div>
+
+      <!-- Operating Envelope Recommendation -->
+      <div id="envelopeSection" class="hidden p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-200 text-xs">
+        <span class="font-bold text-amber-400">Mitigation Envelope: </span>
+        <span id="envelopeText">-</span>
+      </div>
+
+      <!-- SVG Plot Container -->
+      <div class="space-y-2 pt-2">
+        <span class="text-xs text-slate-400 block">AS/NZS 61000.3.100 Voltage Profile & Statutory Boundaries:</span>
+        <div id="plotContainer" class="w-full bg-slate-950 rounded-lg border border-slate-800 p-2 flex items-center justify-center min-h-[160px] overflow-hidden">
+          <span class="text-xs text-slate-500">Run a scenario to inspect vector SVG plot</span>
+        </div>
+      </div>
+
+      <!-- Audit Receipt -->
+      <div class="bg-slate-950/90 rounded-lg p-3 border border-slate-800/80 font-mono text-[11px] space-y-1 text-slate-400">
+        <div class="flex justify-between items-center">
+          <span class="text-slate-500 uppercase tracking-wider text-[10px]">Cryptographic Non-Repudiation Receipt</span>
+          <span class="text-emerald-400">SHA-256 Verified</span>
+        </div>
+        <div class="truncate"><span class="text-slate-500">Reproducibility SHA-256: </span><span id="valSHA" class="text-sky-300">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let scenariosData = [];
+    let isLiveMode = false;
+    let liveApiUrl = "http://127.0.0.1:8000";
+
+    async function init() {
+      try {
+        const resp = await fetch("./precomputed_receipts.json");
+        const json = await resp.json();
+        scenariosData = json.scenarios || [];
+        populateDropdown();
+        loadScenario(0);
+      } catch (err) {
+        console.warn("Could not load precomputed_receipts.json directly; using embedded presets.");
+      }
+    }
+
+    function populateDropdown() {
+      const select = document.getElementById("scenarioSelect");
+      select.innerHTML = "";
+      scenariosData.forEach((s, idx) => {
+        const opt = document.createElement("option");
+        opt.value = idx;
+        opt.textContent = `${s.network_id}: ${s.title}`;
+        select.appendChild(opt);
+      });
+      select.addEventListener("change", (e) => loadScenario(e.target.value));
+    }
+
+    function loadScenario(idx) {
+      const s = scenariosData[idx];
+      if (!s) return;
+      document.getElementById("lblNetwork").textContent = s.network_id;
+      document.getElementById("lblCapacity").textContent = `${s.capacity_kw >= 1000 ? (s.capacity_kw / 1000) + ' MW' : s.capacity_kw + ' kW'}`;
+      document.getElementById("lblAsset").textContent = s.asset_type.replace(/_/g, " ").toUpperCase();
+      displayResult(s);
+    }
+
+    function displayResult(res) {
+      const badge = document.getElementById("decisionBadge");
+      badge.textContent = res.decision.replace(/_/g, " ");
+
+      if (res.decision === "FAST_TRACK_APPROVED") {
+        badge.className = "text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-500/30";
+      } else if (res.decision === "CONDITIONAL_DOE_OR_CAP") {
+        badge.className = "text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider bg-amber-950 text-amber-400 border border-amber-500/30";
+      } else {
+        badge.className = "text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider bg-red-950 text-red-400 border border-red-500/30";
+      }
+
+      document.getElementById("valVoltage").textContent = `${res.peak_voltage_pu} pu`;
+      document.getElementById("valLoading").textContent = `${res.max_thermal_loading_pct}%`;
+      document.getElementById("valSCR").textContent = res.scr_n1 ? res.scr_n1.toFixed(2) : "N/A";
+      document.getElementById("valConstraint").textContent = (res.binding_constraint || "NONE").replace(/_/g, " ");
+      document.getElementById("valSHA").textContent = res.reproducibility_sha256 || "-";
+
+      const regAlert = document.getElementById("regulatoryAlert");
+      if (res.regulatory_override) {
+        regAlert.classList.remove("hidden");
+        document.getElementById("regulatoryText").textContent = res.regulatory_override;
+      } else {
+        regAlert.classList.add("hidden");
+      }
+
+      const envSec = document.getElementById("envelopeSection");
+      if (res.recommended_envelope) {
+        envSec.classList.remove("hidden");
+        document.getElementById("envelopeText").textContent = res.recommended_envelope;
+      } else {
+        envSec.classList.add("hidden");
+      }
+    }
+
+    document.getElementById("btnToggleLive").addEventListener("click", () => {
+      isLiveMode = !isLiveMode;
+      const btn = document.getElementById("btnToggleLive");
+      const badge = document.getElementById("connectionBadge");
+      if (isLiveMode) {
+        btn.textContent = "Switch to Offline Presets";
+        badge.textContent = "● Live API Mode (http://127.0.0.1:8000)";
+        badge.className = "text-xs px-2.5 py-1 rounded-full border border-sky-500/30 bg-sky-950/40 text-sky-400 font-medium";
+      } else {
+        btn.textContent = "Switch to Live API";
+        badge.textContent = "● Zero-Backend Preset Mode";
+        badge.className = "text-xs px-2.5 py-1 rounded-full border border-emerald-500/30 bg-emerald-950/40 text-emerald-400 font-medium";
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

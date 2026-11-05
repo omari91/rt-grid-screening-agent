@@ -16,5 +16,9 @@ build/
 .env
 .DS_Store
 
+# Marketplace distribution & local skill zips
+*.zip
+deploy/agensi/
+
 # Optional local link to full Ausgrid CSVs
 data/
