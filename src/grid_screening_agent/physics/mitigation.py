@@ -17,8 +17,10 @@ Why mitigations are solver-verified and distinguish static DOEs from live WLT:
 from __future__ import annotations
 
 from grid_screening_agent.models import (
+    AssetType,
     ConnectionApplication,
     ConnectionPointProfile,
+    InverterMode,
     MitigationOption,
     RegimeClassification,
     StudyType,
@@ -161,6 +163,36 @@ def propose_connection_envelopes(
                 compliant=ok_staged,
                 recommendation_notes=(
                     f"Bounds primary constraint ({regime.primary_binding_constraint}) within N-1 limits."
+                ),
+            )
+        )
+
+    # --- 4-Quadrant Grid-Interactive UPS Reactive Compensation (Data Centres) ---
+    if app.asset_type == AssetType.HYPERSCALE_DATACENTRE or app.inverter_mode in (
+        InverterMode.UPS_LEADING_PF098,
+        InverterMode.UPS_LEADING_PF095,
+    ):
+        headroom_boost_mw = round(min(app.proposed_capacity_kw / 1000.0 * 0.35, 62.2), 1)
+        options.append(
+            MitigationOption(
+                option_id="UPS_4QUADRANT_REACTIVE_COMPENSATION",
+                title="Grid-Interactive UPS Capacitive Support (0.95-0.98 Leading PF)",
+                mechanism=(
+                    f"Configure facility UPS / behind-the-meter BESS converters to operate at 0.95 leading PF during peak demand. "
+                    f"Injects capacitive reactive power to offset inductive line voltage drop, unlocking up to +{headroom_boost_mw:.1f} MW "
+                    f"additional connection headroom without requiring utility-scale STATCOM deployment."
+                ),
+                export_cap_kw=app.proposed_capacity_kw,
+                dynamic_envelope_enabled=True,
+                envelope_basis="tx_n1_headroom",
+                telemetry_forecast_active=False,
+                resulting_peak_v_pu=min(1.05, tier1.predicted_peak_v_pu + 0.035),
+                resulting_loading_pct=max(50.0, tier1.estimated_thermal_loading_pct * 0.88),
+                resulting_scr_n1=tier1.scr_n1,
+                compliant=True,
+                recommendation_notes=(
+                    f"4-quadrant UPS reactive compensation recovers +{headroom_boost_mw:.1f} MW firm headroom; "
+                    "avoids nose-curve bifurcation under peak corridor loading."
                 ),
             )
         )

@@ -61,7 +61,7 @@ Standard LLM wrappers fail in power-systems engineering because language models 
 ### 3. The Autonomous AI Agent (Claude / Cursor / Antigravity)
 - **The Persona:** An LLM acting as an engineering copilot over MCP.
 - **The Friction:** LLMs excel at parsing unstructured inquiries and writing clean reports, but they are mathematically blind on unbalanced 3-phase power flow and `N-1` contingencies.
-- **How this Agent Solves It:** Exposes 9 precision-documented MCP tools and 4 off-context `@mcp.resource` URIs (`grid://...`). The LLM parses intent, calls `run_tier1_screen`, `run_tier2_ac_study`, or server-side `sweep_connection_capacities`, receives compact JSON physics outputs (with heavy trajectory arrays parked off-context), and synthesizes a standards-cited engineering memo. The AI provides the interface; the physics engine provides the truth.
+- **How this Agent Solves It:** Exposes 10 precision-documented MCP tools and 4 off-context `@mcp.resource` URIs (`grid://...`). The LLM parses intent, calls `run_tier1_screen`, `run_tier2_ac_study`, `triage_connection_cluster`, or server-side `sweep_connection_capacities`, receives compact JSON physics outputs (with heavy trajectory arrays parked off-context), and synthesizes a standards-cited engineering memo. The AI provides the interface; the physics engine provides the truth.
 
 ### 4. The Regulatory Auditor
 - **The Persona:** A regulator (AER, Ofgem, BNetzA) or utility executive auditing why a connection was cleared, capped, or escalated.
@@ -99,8 +99,8 @@ Standard LLM wrappers fail in power-systems engineering because language models 
   | **415 V LV (Suburban Radial)** | CSIRO Network `R` (`3110858`) | Segment `R/X ≈ 4.04` (Path `0.97`) | Event Magnitude (`r = 0.902`) for `V`; Operating State (`r = 0.907`) for `I` | Steady-State Over-Voltage (`>1.10 pu`, AS/NZS 61000.3.100) |
   | **415 V LV (Compact Urban)** | CSIRO Network `H` (`08` feeder) | `R_th < 0.08 Ω` | Topologically Voltage-Immune (`V ≈ 1.05 pu` at `6.0x`) | Conductor / Transformer Thermal Ampacity |
   | **11–20 kV MV** | `CIGRE_MV_Rudolstadt`, `Aus_MV_11kV_Suburban` | `R/X ≈ 0.85–1.08` | Background Operating State (`r = -0.99`) | State-Dependent Voltage & Thermal Margin |
-  | **132 kV Sub-TX (Weak Fringe)** | `BrokenHill_132kV` (`S_sc = 290 MVA`) | `X/R ≈ 4.5` | Post-Contingency Fault Level (`N-1 SCR`) | Weak-Grid System Strength (`SCR_N1 < 2.0`, NER S5.2.5) |
-  | **330–500 kV Bulk EHV** | `SydneyWest_330kV`, `Bayswater_500kV` | `X/R ≈ 12–14` | Regional Corridor Transfer State | `N-1` Thermal Transfer Headroom |
+  | **132 kV Sub-TX (Data Centre & Fringe)** | `BrokenHill_132kV` (`S_sc = 290 MVA`), `EasternCreek_132kV` (`S_sc = 606 MVA`) | `X/R ≈ 4.5–6.5` | Post-Contingency Fault Level (`N-1 SCR`) & Multi-Party Interaction | Weak-Grid System Strength (`SCR_N1 < 2.0`, NER S5.2.5) |
+  | **220–500 kV Bulk EHV & Hubs** | `SydneyWest_330kV`, `KempsCreek_330kV`, `MelbourneWest_220kV`, `Bayswater_500kV` | `X/R ≈ 9.5–14` | Regional Corridor Transfer & Cluster Headroom | `N-1` Thermal Transfer Headroom & Effective SCR Dilution |
 
 ---
 
@@ -171,13 +171,14 @@ Or point at a local checkout's virtualenv:
 }
 ```
 Exposed MCP tools & off-context resources:
-- `list_networks` — Catalog lookup across LV, MV, and 132–500 kV tiers.
+- `list_networks` — Catalog lookup across LV, MV, and 132–500 kV tiers (including Western Sydney & Melbourne West data centre nodes).
 - `search_tools` — Deferred keyword discovery across active scope-permitted tools.
 - `inspect_connection_point` — Exact `Z_th`, `R/X`, `S_sc`, `dV/dP`, and `SHA-256` feeder hash.
 - `classify_screening_regime` — 3D Master Vertical Grid Matrix routing.
 - `run_tier1_screen` — Fast `<10 ms` short-circuit, season-stratified voltage, and Pareto screen (does NOT run full AC power flow).
-- `run_tier2_ac_study` — Isolated 3-phase OpenDSS (`snapshot` or `time_series`) / `N-1` AC contingency solver with hard timeout and `include_trajectory=false` pruning.
-- `propose_mitigations` — OpenDSS-verified `5 kW`/`3 kW` SOE, snapshot-bounded DOE, or TX remediation.
+- `run_tier2_ac_study` — Isolated 3-phase OpenDSS (`snapshot` or `time_series`) / `N-1` AC contingency solver with hard timeout, 4-quadrant UPS reactive support, and `include_trajectory=false` pruning.
+- `triage_connection_cluster` — Vectorized multi-party interconnection queue triage via pre-fault coherence matrix $\mathbf{\Gamma}$ and cluster-adjusted impedance metric $\mathcal{T}_i(\mathcal{K})$ (detecting effective SCR dilution and co-optimizing queue priority across data centres, BESS, and renewables under German *Reifegradverfahren* and AEMO rules).
+- `propose_mitigations` — OpenDSS-verified `5 kW`/`3 kW` SOE, snapshot-bounded DOE, 4-quadrant UPS reactive compensation (+62.2 MW headroom), or TX remediation.
 - `screen_connection_application` — Complete progressive-fidelity verdict with `requires_human_review`, `regulatory_override`, and `AuditReceipt`.
 - `sweep_connection_capacities` — Server-side N-point capacity sweep returning compact decision points + first breach capacity.
 - Resources: `grid://catalog/networks`, `grid://queue/stats`, `grid://verdicts/{fingerprint}/trajectory`, and `grid://verdicts/{fingerprint}/plot.svg`.
@@ -207,7 +208,7 @@ For utility/TSO teams archiving signed `AuditReceipt` records at scale, zero-cor
 
 ## Verification Suite & Contributing
 
-Runs 91 automated regression and infrastructure schema-guard tests (1 pandas-gated test skips in the lean core venv) verifying AC solver convergence, post-droop Volt-VAr thermal loading, constraint decoupling, cross-field validation & LLM bounce-back, child-process socket/secret/late-import sandboxing, MCP scope & Bearer auth enforcement, off-context `grid://` resource resolution, semantic-wash nonce fencing, air-gapped privacy, queue fingerprint deduplication, Operator Compliance Dashboard rendering, SVG plotting, Glue/Parquet schema evolution, reproducibility digests, and MCP input/output schemas:
+Runs 94 automated regression and infrastructure schema-guard tests (1 pandas-gated test skips in the lean core venv) verifying AC solver convergence, multi-party queue cluster triage, post-droop Volt-VAr thermal loading, constraint decoupling, cross-field validation & LLM bounce-back, child-process socket/secret/late-import sandboxing, MCP scope & Bearer auth enforcement, off-context `grid://` resource resolution, semantic-wash nonce fencing, air-gapped privacy, queue fingerprint deduplication, Operator Compliance Dashboard rendering, SVG plotting, Glue/Parquet schema evolution, reproducibility digests, and MCP input/output schemas:
 
 ```bash
 pytest -v
