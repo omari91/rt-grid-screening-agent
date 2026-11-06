@@ -46,6 +46,9 @@ from grid_screening_agent.models import (
     CapacitySweepPoint,
     CapacitySweepResponse,
     ClearanceDecision,
+    ClusterApplicant,
+    ClusterTriageItem,
+    ClusterTriageResponse,
     ConnectionApplication,
     ConnectionPointProfile,
     InverterMode,
@@ -73,6 +76,7 @@ from grid_screening_agent.tools import (
     tool_propose_mitigations,
     tool_run_tier1_screen,
     tool_run_tier2_ac_study,
+    tool_triage_connection_cluster,
 )
 
 MCPScopeLiteral = Literal["full", "tier1_only", "readonly"]
@@ -134,6 +138,12 @@ _TOOL_DIRECTORY: tuple[ToolMetadataItem, ...] = (
         scope_required="tier1_only",
         cost_tier="tier1_analytical (<10ms)",
         summary="Sub-10ms analytical short-circuit, thermal, and season-stratified voltage screen (no full AC flow).",
+    ),
+    ToolMetadataItem(
+        name="triage_connection_cluster",
+        scope_required="tier1_only",
+        cost_tier="tier1_analytical (<10ms)",
+        summary="Sub-millisecond vectorized queue cluster triage via electrical coherence Gamma and T_i(K) operator.",
     ),
     ToolMetadataItem(
         name="run_tier2_ac_study",
@@ -537,6 +547,18 @@ def sweep_connection_capacities(
     return cast(CapacitySweepResponse, resp.model_dump())
 
 
+def triage_connection_cluster(
+    applications: list[dict[str, Any]],
+) -> ClusterTriageResponse:
+    """Execute vectorized multi-party queue cluster triage via electrical coherence Gamma and T_i(K) operator.
+
+    Computes effective coupled load P_eff, cluster-diluted SCR_eff, and priority ranking balancing
+    administrative readiness against physical network impedance in sub-millisecond execution.
+    """
+    return cast(ClusterTriageResponse, tool_triage_connection_cluster(applications))
+
+
+
 # --- DOMAIN 2: OFF-CONTEXT MCP RESOURCE HANDLERS ---
 
 
@@ -649,7 +671,7 @@ def build_mcp_server(scope: Optional[str] = None) -> _MCPServer:
         structured_output=True,
     )(_scoped_search_tools)
 
-    # Tier-1 sub-10ms analytical heuristic screen (enabled in `tier1_only` and `full`)
+    # Tier-1 sub-10ms analytical heuristic screen & cluster triage (enabled in `tier1_only` and `full`)
     if active_scope in ("tier1_only", "full"):
         server.tool(
             annotations={
@@ -660,6 +682,15 @@ def build_mcp_server(scope: Optional[str] = None) -> _MCPServer:
             },
             structured_output=True,
         )(run_tier1_screen)
+        server.tool(
+            annotations={
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+            },
+            structured_output=True,
+        )(triage_connection_cluster)
 
     # Tier-2 isolated OpenDSS child-process & batch sweep tools (restricted strictly to `full` scope)
     if active_scope == "full":

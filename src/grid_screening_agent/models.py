@@ -28,6 +28,9 @@ SupportedNetworkId = Literal[
     "Armidale_330kV",
     "SydneyWest_330kV",
     "Bayswater_500kV",
+    "EasternCreek_132kV",
+    "KempsCreek_330kV",
+    "MelbourneWest_220kV",
 ]
 
 SUPPORTED_NETWORK_IDS: tuple[str, ...] = (
@@ -41,6 +44,9 @@ SUPPORTED_NETWORK_IDS: tuple[str, ...] = (
     "Armidale_330kV",
     "SydneyWest_330kV",
     "Bayswater_500kV",
+    "EasternCreek_132kV",
+    "KempsCreek_330kV",
+    "MelbourneWest_220kV",
 )
 
 
@@ -72,6 +78,9 @@ class InverterMode(str, Enum):
     UNMANAGED_PF1 = "unmanaged_pf1"
     AS4777_VOLT_VAR = "as4777_volt_var"
     AS4777_VOLT_VAR_WATT = "as4777_volt_var_watt"
+    UPS_UNITY_PF1 = "ups_unity_pf1"
+    UPS_LEADING_PF098 = "ups_leading_pf098"
+    UPS_LEADING_PF095 = "ups_leading_pf095"
 
 
 class StudyType(str, Enum):
@@ -92,6 +101,9 @@ InverterModeLiteral = Literal[
     "unmanaged_pf1",
     "as4777_volt_var",
     "as4777_volt_var_watt",
+    "ups_unity_pf1",
+    "ups_leading_pf098",
+    "ups_leading_pf095",
 ]
 
 StudyTypeLiteral = Literal[
@@ -456,3 +468,66 @@ class ScreeningVerdict(BaseModel):
     mitigations: list[MitigationOption] = Field(default_factory=list)
     sanity_gate: SanityGateReport
     audit_receipt: AuditReceipt
+
+
+class ClusterApplicant(BaseModel):
+    """Candidate project application submitted to a batch connection queue or maturity cycle."""
+
+    project_id: str = Field(..., description="Unique project identifier (e.g. 'DC_NSW_01').")
+    network_id: str = Field(default="SydneyWest_330kV", description="Substation or feeder ID.")
+    proposed_capacity_mw: float = Field(..., gt=0.0, description="Requested connection active power in MW.")
+    admin_readiness_score: float = Field(
+        default=50.0,
+        ge=0.0,
+        le=100.0,
+        description="Administrative/financial readiness score in [0, 100] (e.g. from German Reifegradverfahren Tabelle 11 criteria).",
+    )
+    asset_type: AssetTypeLiteral = Field(
+        default="hyperscale_datacentre",
+        description="Asset technology classification.",
+    )
+
+
+class ClusterTriageItem(BaseModel):
+    """Screening outcome for an individual applicant within a multi-party connection queue cluster."""
+
+    rank: int = Field(..., description="Priority ranking within the evaluated batch (1 = highest clearance priority).")
+    project_id: str
+    network_id: str
+    proposed_capacity_mw: float
+    coupled_effective_load_mw: float = Field(
+        ...,
+        description="Effective coupled active power P_eff = P_i + sum(gamma_ij^2 * P_j) accounting for electrical coherence.",
+    )
+    effective_scr: float = Field(
+        ...,
+        description="Cluster-diluted short-circuit ratio SCR_eff = S_sc / (P_i + sum(gamma_ij * P_j)).",
+    )
+    isolated_scr: float = Field(
+        ...,
+        description="Baseline short-circuit ratio in isolation SCR = S_sc / P_i.",
+    )
+    cluster_triage_score: float = Field(
+        ...,
+        description="Cluster-Adjusted Impedance Triage operator T_i(K) = z(P_eff) + z(rho_eff). Lower is electrically safer.",
+    )
+    priority_score: float = Field(
+        ...,
+        description="Optimal composite score balancing administrative maturity against physical network impedance.",
+    )
+    decision: ClearanceDecision
+    requires_human_review: bool
+    regulatory_warning: Optional[str] = None
+
+
+class ClusterTriageResponse(BaseModel):
+    """Complete multi-party queue triage assessment for a cluster of competing connection applications."""
+
+    total_projects: int
+    total_proposed_mw: float
+    total_effective_coupled_mw: float
+    cluster_coherence_mean: float
+    execution_ms: float
+    audit_sha256: str
+    items: list[ClusterTriageItem]
+

@@ -4639,6 +4639,39 @@
       "hc_voltage_mw": 165.0,
       "hc_thermal_n1_mw": 190.0,
       "hc_scr_mw": 94.25
+    },
+    "EasternCreek_132kV": {
+      "name": "EasternCreek_132kV",
+      "region": "NSW1",
+      "nominal_kv": 132.0,
+      "s_sc_mva": 606.06,
+      "n1_scr_retention": 0.65,
+      "xr_ratio": 6.5,
+      "hc_voltage_mw": 420.0,
+      "hc_thermal_n1_mw": 480.0,
+      "hc_scr_mw": 196.97
+    },
+    "KempsCreek_330kV": {
+      "name": "KempsCreek_330kV",
+      "region": "NSW1",
+      "nominal_kv": 330.0,
+      "s_sc_mva": 1923.08,
+      "n1_scr_retention": 0.65,
+      "xr_ratio": 12.0,
+      "hc_voltage_mw": 950.0,
+      "hc_thermal_n1_mw": 1100.0,
+      "hc_scr_mw": 625.0
+    },
+    "MelbourneWest_220kV": {
+      "name": "MelbourneWest_220kV",
+      "region": "VIC1",
+      "nominal_kv": 220.0,
+      "s_sc_mva": 1282.05,
+      "n1_scr_retention": 0.65,
+      "xr_ratio": 9.5,
+      "hc_voltage_mw": 750.0,
+      "hc_thermal_n1_mw": 850.0,
+      "hc_scr_mw": 416.67
     }
   }
 }

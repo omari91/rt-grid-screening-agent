@@ -39,6 +39,7 @@ def test_mcp_server_registers_all_full_scope_tools() -> None:
         "propose_mitigations",
         "screen_connection_application",
         "sweep_connection_capacities",
+        "triage_connection_cluster",
     }
     assert expected == tool_names
 
@@ -53,6 +54,7 @@ def test_mcp_scope_tier1_only_and_readonly_hide_child_process_tools() -> None:
         "classify_screening_regime",
         "search_tools",
         "run_tier1_screen",
+        "triage_connection_cluster",
     }
 
     ro_server = build_mcp_server(scope="readonly")
@@ -166,7 +168,7 @@ def test_mcp_verdict_includes_binding_constraints_and_reproducibility_sha256() -
 def test_mcp_all_tools_publish_typed_output_schemas_and_annotations() -> None:
     """Every registered MCP tool must publish an explicit JSON outputSchema and openWorldHint=False."""
     tools = asyncio.run(mcp.list_tools())
-    assert len(tools) == 9
+    assert len(tools) == 10
     for tool in tools:
         out_schema = getattr(tool, "output_schema", None) or getattr(tool, "outputSchema", None)
         assert isinstance(out_schema, dict), f"Tool {tool.name} is missing outputSchema!"
@@ -276,3 +278,38 @@ def test_dss_runner_defers_opendssdirect_import_out_of_parent_process() -> None:
         check=False,
     )
     assert proc.returncode == 0, proc.stderr
+
+
+def test_mcp_triage_connection_cluster_and_ups_modes() -> None:
+    """Test multi-party queue cluster triage and UPS reactive compensation modes."""
+    from grid_screening_agent.mcp_server import triage_connection_cluster
+    from grid_screening_agent.tools import tool_propose_mitigations
+
+    # 1. Test triage_connection_cluster tool across Western Sydney cluster
+    batch = [
+        {"project_id": "DC_EASTERN_CK", "network_id": "EasternCreek_132kV", "proposed_capacity_mw": 120.0, "admin_readiness_score": 85.0},
+        {"project_id": "DC_SYD_WEST", "network_id": "SydneyWest_330kV", "proposed_capacity_mw": 250.0, "admin_readiness_score": 90.0},
+        {"project_id": "BESS_KEMPS_CK", "network_id": "KempsCreek_330kV", "proposed_capacity_mw": 100.0, "admin_readiness_score": 70.0},
+    ]
+    res = triage_connection_cluster(batch)
+    assert res["total_projects"] == 3
+    assert res["total_proposed_mw"] == 470.0
+    assert len(res["items"]) == 3
+    assert res["items"][0]["rank"] == 1
+    assert len(res["audit_sha256"]) == 64
+
+    # 2. Test UPS reactive compensation mitigation synthesis for hyperscale data centre
+    mits = tool_propose_mitigations(
+        network_id="EasternCreek_132kV",
+        proposed_capacity_kw=80000.0,  # 80 MW
+        asset_type="hyperscale_datacentre",
+        inverter_mode="ups_leading_pf095",
+    )
+    ups_mit = next(
+        (m for m in mits["mitigation_options"] if m["option_id"] == "UPS_4QUADRANT_REACTIVE_COMPENSATION"),
+        None,
+    )
+    assert ups_mit is not None
+    assert "Capacitive Support" in ups_mit["title"]
+    assert ups_mit["compliant"] is True
+

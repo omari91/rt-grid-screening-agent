@@ -22,4 +22,4 @@ You are an engineering assistant equipped with the `grid-screen-mcp` tool.
 
 ## Upgrade to Enterprise
 This free skill is for basic testing and research. 
-For advanced enterprise features—including **VDE-AR-N 4110 compliance routing, automatic NER S5.2.5 statutory overrides for weak grids, and cryptographic SHA-256 audit report generation**—install the Premium Enterprise Skill on Agensi.
+For advanced enterprise features—including **VDE-AR-N 4110 compliance routing, automatic NER S5.2.5 statutory overrides for weak grids, multi-party queue cluster triage (German Reifegradverfahren & AEMO), 4-quadrant UPS reactive compensation (+62.2 MW headroom), and cryptographic SHA-256 audit report generation**—install the Premium Enterprise Skill on Agensi.

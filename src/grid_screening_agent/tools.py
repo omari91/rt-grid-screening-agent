@@ -172,6 +172,15 @@ def tool_propose_mitigations(
     return {"mitigation_options": [o.model_dump() for o in opts]}
 
 
+def tool_triage_connection_cluster(
+    applications: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Execute multi-party connection queue cluster triage with vectorized Z_bus coherence and SCR dilution."""
+    from grid_screening_agent.physics.cluster_triage import run_cluster_triage
+    res = run_cluster_triage(applications)
+    return res.model_dump()
+
+
 TOOL_DISPATCH: dict[str, Callable[..., dict[str, Any]]] = {
     "list_networks": tool_list_networks,
     "inspect_connection_point": tool_inspect_connection_point,
@@ -179,6 +188,7 @@ TOOL_DISPATCH: dict[str, Callable[..., dict[str, Any]]] = {
     "run_tier1_screen": tool_run_tier1_screen,
     "run_tier2_ac_study": tool_run_tier2_ac_study,
     "propose_mitigations": tool_propose_mitigations,
+    "triage_connection_cluster": tool_triage_connection_cluster,
 }
 
 _COMMON_APP_PROPERTIES: dict[str, Any] = {
@@ -317,6 +327,37 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "type": "object",
             "properties": _COMMON_APP_PROPERTIES,
             "required": ["network_id", "proposed_capacity_kw"],
+        },
+        "annotations": {
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    },
+    {
+        "name": "triage_connection_cluster",
+        "description": "Execute sub-millisecond vectorized multi-party queue cluster triage using electrical coherence matrix Gamma and Cluster-Adjusted Impedance Triage operator T_i(K). Computes effective coupled load, cluster-diluted SCR_eff, and priority ranking.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "applications": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "project_id": {"type": "string"},
+                            "network_id": {"type": "string", "enum": list(SUPPORTED_NETWORK_IDS)},
+                            "proposed_capacity_mw": {"type": "number"},
+                            "admin_readiness_score": {"type": "number"},
+                            "asset_type": {"type": "string", "enum": [e.value for e in AssetType]},
+                        },
+                        "required": ["project_id", "network_id", "proposed_capacity_mw"],
+                    },
+                    "description": "List of concurrent connection applications competing in the same corridor or maturity cycle.",
+                },
+            },
+            "required": ["applications"],
         },
         "annotations": {
             "readOnlyHint": True,
