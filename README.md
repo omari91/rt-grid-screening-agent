@@ -80,6 +80,10 @@ Standard LLM wrappers fail in power-systems engineering because language models 
 
 ## Engineering Safeguards & Scope Boundaries
 
+- **Preliminary Screening Scope & Regulatory Disclaimer (VDE-AR-N 4110 / NER S5.2.5)**:
+  > **IMPORTANT NOTICE:** This tool is for preliminary screening only. It does not constitute a conformity assessment under VDE-AR-N 4110. Final certification must be performed by an accredited body.
+  >
+  > In Germany, statutory grid connection conformity requires formal unit certification (*Einheitenzertifikat*) and plant certification (*Anlagenzertifikat*) conducted by an accredited certification body (e.g., TÜV, DEKRA, VDE Prüf- und Zertifizierungsinstitut, DNV) and final operational permission (*Betriebserlaubnis*) from the responsible Network Operator (VNB/ÜNB). In Australia, this tool does not replace formal Generator Performance Standards (GPS) negotiation, R1 dynamic testing, or registration with AEMO and the connecting NSP under National Electricity Rules (NER) Chapter 5.
 - **Zero-Mutation Subprocess OpenDSS Isolation, Bounded Concurrency & Hard Timeout**: `opendssdirect.py` uses a C-level process singleton and relative `.dss` redirects. All 415 V unbalanced 3-phase AC studies execute in an isolated child process (`grid_screening_agent.physics._dss_runner`) guarded by `BoundedSemaphore` (`GRID_AGENT_MAX_DSS_WORKERS`), with `cwd` scoped strictly to the worker, post-Volt-VAr reactive current (`I_q`) thermal re-measurement, and a hard `subprocess.run(..., timeout=solver_timeout_sec)` guard. Any worker timeout or non-convergence routes deterministically to `ABSTAIN_DATA_OR_SOLVER_FAULT`.
 - **Zero-Trust MCP & Subprocess Sandboxing**:
   - **Typed MCP `outputSchema`, Tool Annotations & Dynamic Scope (`GRID_AGENT_MCP_SCOPE`)**: Every tool on `grid-screen-mcp` publishes both strict `Literal` JSON-Schema input `enum`s and explicit Pydantic `outputSchema` definitions (`structuredContent`) with `openWorldHint=false`. Setting `GRID_AGENT_MCP_SCOPE=tier1_only` or `readonly` dynamically omits child-process Tier-2 AC and batch sweep tools from untrusted agent registries.
@@ -215,6 +219,22 @@ pytest -v
 ```
 
 Contributions, additional feeder/substation benchmarks, and MCP client integrations are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request to ensure zero numerical drift and invariant preservation.
+
+## Citation & Academic Research
+
+> **Technical Note:** This is a reproducible research artifact for the ETECOM 2026 paper. It screens the CIGRE MV benchmark and CSIRO LV feeders. It is not a certified conformity tool.
+
+If you use this repository, the underlying OpenDSS models, or the cluster triage engine in academic research, please cite it using [`CITATION.cff`](CITATION.cff):
+
+```bibtex
+@inproceedings{ondieki2026constraint,
+  title={Constraint-Decoupled Dominance Across the Vertical Grid Continuum: Physics-Grounded Autonomous Connection Screening},
+  author={Ondieki, Clifford},
+  booktitle={Proceedings of the IEEE International Conference on Emerging Technologies for Electrical Engineering and Communications (ETECOM 2026)},
+  year={2026},
+  note={Reproducible research artifact. Screens CIGRE MV benchmark and CSIRO LV feeders. Not a certified conformity tool.}
+}
+```
 
 ## License
 

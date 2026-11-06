@@ -24,8 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `EasternCreek_132kV` ($S_{sc} = 606.06\text{ MVA}$, $X/R = 6.5$)
     - `KempsCreek_330kV` ($S_{sc} = 1923.08\text{ MVA}$, $X/R = 12.0$)
     - `MelbourneWest_220kV` ($S_{sc} = 1282.05\text{ MVA}$, $X/R = 9.5$)
-- **Agensi Enterprise Skill**:
-  - Updated `deploy/agensi/SKILL.md` and distribution ZIP archives (`grid-connection-screening-enterprise.zip`, `opendss-grid-connection-screening.zip`) to incorporate cluster triage guidelines, UPS reactive support modes, and standards-compliant engineering report formatting.
+- **Agensi Enterprise Skill & Regulatory Governance**:
+  - Embedded mandatory regulatory notices across `SKILL.md` (root and Agensi marketplace), engineering report templates, and `README.md` explicitly stating: *"This tool is for preliminary screening only. It does not constitute a conformity assessment under VDE-AR-N 4110. Final certification must be performed by an accredited body."*
+  - Added strict agent behavioral rules preventing false "certified" claims, clarifying that formal German grid conformity requires unit and plant certification (*Einheitenzertifikat* / *Anlagenzertifikat*) by accredited certification bodies (e.g., TÜV, DEKRA, VDE Prüf- und Zertifizierungsinstitut) and formal operational notification (*Betriebserlaubnis*) from the responsible Network Operator (VNB/ÜNB).
+  - Updated distribution ZIP archives (`grid-connection-screening-enterprise.zip`, `opendss-grid-connection-screening.zip`) to incorporate cluster triage guidelines, UPS reactive support modes, and standards-compliant engineering report formatting with regulatory disclaimer headers.
+- **Academic Citation & Research Positioning**:
+  - Added `CITATION.cff` (Citation File Format 1.2.0) defining the academic citation metadata for the IEEE ETECOM 2026 conference paper (*Constraint-Decoupled Dominance Across the Vertical Grid Continuum*).
+  - Added technical note across repository and citation metadata: *"This is a reproducible research artifact for the ETECOM 2026 paper. It screens the CIGRE MV benchmark and CSIRO LV feeders. It is not a certified conformity tool."*
 - **Verification**:
   - Added `test_mcp_triage_connection_cluster_and_ups_modes` in `tests/test_mcp_server.py`, bringing test suite coverage to 94 passing tests (1 skipped).
 

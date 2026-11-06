@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software in your academic research or cite the accompanying ETECOM 2026 paper, please cite it as below."
+type: software
+title: "rt-grid-screening-agent: Physics-Grounded Grid Connection Screening Agent"
+abstract: "This is a reproducible research artifact for the ETECOM 2026 paper. It screens the CIGRE MV benchmark and CSIRO LV feeders. It is not a certified conformity tool."
+notes: "This is a reproducible research artifact for the ETECOM 2026 paper. It screens the CIGRE MV benchmark and CSIRO LV feeders. It is not a certified conformity tool."
+authors:
+  - family-names: "Ondieki"
+    given-names: "Clifford"
+repository-code: "https://github.com/omari91/rt-grid-screening-agent"
+url: "https://www.cliffordomari.com"
+license: "MIT"
+version: "0.1.0"
+date-released: "2026-11-01"
+keywords:
+  - "power systems"
+  - "grid connection screening"
+  - "OpenDSS"
+  - "hosting capacity"
+  - "reproducible research"
+  - "CIGRE MV benchmark"
+  - "CSIRO LV feeders"
+  - "ETECOM 2026"
+  - "VDE-AR-N 4110"
+  - "AS/NZS 4777.2"
+  - "model-context-protocol"
+preferred-citation:
+  type: conference-paper
+  title: "Constraint-Decoupled Dominance Across the Vertical Grid Continuum: Physics-Grounded Autonomous Connection Screening"
+  authors:
+    - family-names: "Ondieki"
+      given-names: "Clifford"
+  collection-title: "Proceedings of the IEEE International Conference on Emerging Technologies for Electrical Engineering and Communications (ETECOM 2026)"
+  year: 2026
+  notes: "This is a reproducible research artifact for the ETECOM 2026 paper. It screens the CIGRE MV benchmark and CSIRO LV feeders. It is not a certified conformity tool."
