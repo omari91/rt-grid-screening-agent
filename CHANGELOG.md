@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Multi-Party Queue Cluster Triage (`triage_connection_cluster`)**:
+  - Added sub-millisecond ($<1\text{ ms}$) vectorized cluster triage engine (`physics/cluster_triage.py`) implementing the Cluster-Adjusted Impedance Triage operator $\mathcal{T}_i(\mathcal{K}) = z(P_{\text{eff}, i}) + z(\rho_{\text{eff}, i})$.
+  - Pre-fault electrical coherence matrix $\mathbf{\Gamma}_{ij} = |Z_{ij}|/\sqrt{|Z_{ii}||Z_{jj}|}$ calculating inter-bus coupling and control cross-coupling risks.
+  - Cluster-diluted effective Short-Circuit Ratio ($\text{SCR}_{\text{eff}}$) calculations, addressing the German TSO *Reifegradverfahren* (April/June 2026, V1.2, BNetzA BK6-25-287) and AEMO system strength queue backlog.
+  - Composite queue prioritization balancing administrative readiness against electrical network impedance footprint.
+  - Registered 10th MCP tool `triage_connection_cluster` in `tools.py` and `mcp_server.py` with typed output schemas, Pydantic models (`ClusterApplicant`, `ClusterTriageItem`, `ClusterTriageResponse`), and explicit M8ven trust hints (`readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false`).
+- **4-Quadrant Data Centre UPS Reactive Compensation**:
+  - Added dedicated UPS operating modes to `models.py`: `ups_leading_pf098`, `ups_leading_pf095`, and `ups_unity_pf1`.
+  - Added deterministic mitigation `UPS_4QUADRANT_REACTIVE_COMPENSATION` to `physics/mitigation.py`, providing capacitive voltage firming to unlock up to $+62.2\text{ MW}$ of additional firm data centre hosting headroom without transmission reconductoring.
+- **Transmission Network Expansion**:
+  - Added high-density data centre transmission nodes to `models.py` and `fixtures/reference_profiles.json`:
+    - `EasternCreek_132kV` ($S_{sc} = 606.06\text{ MVA}$, $X/R = 6.5$)
+    - `KempsCreek_330kV` ($S_{sc} = 1923.08\text{ MVA}$, $X/R = 12.0$)
+    - `MelbourneWest_220kV` ($S_{sc} = 1282.05\text{ MVA}$, $X/R = 9.5$)
+- **Agensi Enterprise Skill**:
+  - Updated `deploy/agensi/SKILL.md` and distribution ZIP archives (`grid-connection-screening-enterprise.zip`, `opendss-grid-connection-screening.zip`) to incorporate cluster triage guidelines, UPS reactive support modes, and standards-compliant engineering report formatting.
+- **Verification**:
+  - Added `test_mcp_triage_connection_cluster_and_ups_modes` in `tests/test_mcp_server.py`, bringing test suite coverage to 94 passing tests (1 skipped).
+
+---
+
 ## [0.1.0] - 2026-11-01
 
 ### Added
