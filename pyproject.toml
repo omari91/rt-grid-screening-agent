@@ -108,6 +108,7 @@ include = [
     "LICENSE",
     "CONTRIBUTING.md",
     "CHANGELOG.md",
+    "CITATION.cff",
     "server.json",
     "pyproject.toml",
 ]
